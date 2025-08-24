@@ -8,14 +8,23 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State var text: String = "Hello, World!"
+    
     var body: some View {
         VStack {
             Image(systemName: "globe")
                 .imageScale(.large)
                 .foregroundStyle(.tint)
-            Text("Hello, world!")
+            Text(text)
         }
         .padding()
+        .task {
+            let networkManager = NetworkManager()
+            try! await networkManager.fetchLandingContent(completion: { result in
+                guard let title = try? result.get().tfa?.displayTitle else { return }
+                text = title
+            })
+        }
     }
 }
 

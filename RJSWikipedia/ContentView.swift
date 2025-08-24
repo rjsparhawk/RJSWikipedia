@@ -20,10 +20,14 @@ struct ContentView: View {
         .padding()
         .task {
             let networkManager = NetworkManager()
-            try! await networkManager.fetchLandingContent(completion: { result in
+            try! await networkManager.fetchLandingContent { result in
                 guard let title = try? result.get().tfa?.displayTitle else { return }
                 text = title
-            })
+            }
+            try! await networkManager.searchByText("Earth") { result in
+                guard let searchResults = try? result.get() else { return }
+                text = searchResults.textSearchResponseQuery?.textSearchResponseItems?.first?.title ?? "No results"
+            }
         }
     }
 }

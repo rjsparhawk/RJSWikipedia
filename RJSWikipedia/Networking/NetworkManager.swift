@@ -8,11 +8,47 @@
 import Foundation
 
 enum Host: String {
-    case wikipedia = "https://api.wikimedia.org/"
+    case wikipedia = "https://en.wikipedia.org/"
+    case wikimedia = "https://api.wikimedia.org/"
 }
 
-enum Endpoint: String {
-    case articleOfTheDay = "feed/v1/wikipedia/en/featured/"
+enum Endpoint {
+    case articleOfTheDay
+    case textSearch(searchText: String)
+    
+    var httpMethod: String {
+        "GET"
+    }
+    
+    var route: String {
+        switch self {
+        case .articleOfTheDay:
+            return "feed/v1/wikipedia/en/featured/"
+        case .textSearch(_):
+            return "w/api.php"
+        }
+    }
+    
+    var queryParameters: [String: String]? {
+        switch self {
+        case .articleOfTheDay:
+            return nil
+        case .textSearch(let searchText):
+            return [
+              "action": "query",
+              "list": "search",
+              "srsearch": searchText,
+              "format": "json",
+              "prop": "extracts|pageimages",
+              "srlimit": "50",
+            ]
+        }
+    }
+}
+
+enum NetworkError: Error {
+    case invalidURL
+    case invalidJson
 }
 
 final class NetworkManager {
@@ -28,7 +64,7 @@ final class NetworkManager {
     
     // MARK: - Network calls
     func fetchLandingContent(completion: @escaping (Result<LandingContent, Error>) -> Void) async throws {
-        let request = try request(host: .wikipedia, endpoint: .articleOfTheDay)
+        let request = try request(host: .wikimedia, endpoint: .articleOfTheDay)
         
         let task = session.dataTask(with: request) { data, _, error in
             if let data,
@@ -42,28 +78,92 @@ final class NetworkManager {
         task.resume()
     }
     
-    // MARK: - Common
-    private func request(host: Host, endpoint: Endpoint) throws -> URLRequest {
-        let urlString = host.rawValue + endpoint.rawValue + dateFormatter.string(from: Date())
-        
-        guard let url = URL(string: urlString) else {
-            throw NetworkError.invalidURL
+    func searchByText(_ text: String, completion: @escaping (Result<TextSearchResults, Error>) -> Void) async throws {
+        let request = try request(host: currentHost, endpoint: .textSearch(searchText: text))
+        let task = session.dataTask(with: request) { data, _, error in
+            if let data,
+               let textSearchResults = try? JSONDecoder().decode(TextSearchResults.self, from: data) {
+                print("Search results: \(textSearchResults)")
+                completion(.success(textSearchResults))
+            } else {
+                completion(.failure(NetworkError.invalidJson))
+            }
         }
-        
-        print("Created request for \(urlString)")
-        
-        return URLRequest(url: url)
+        task.resume()
     }
     
-}
-
-enum NetworkError: Error {
-    case invalidURL
-    case invalidJson
+    // MARK: - Common
+    private func request(host: Host, endpoint: Endpoint) throws -> URLRequest {
+        var urlString = host.rawValue + endpoint.route
+        
+        switch endpoint {
+        case .articleOfTheDay:
+            // AOTD date is baked into the route, not query params
+            urlString.append(dateFormatter.string(from: Date()))
+        default:
+            break
+        }
+        
+        var components = URLComponents(string: urlString)
+        components?.queryItems = endpoint.queryParameters?.map {
+            URLQueryItem(name: $0.key, value: $0.value)
+        }
+        
+        print("Creating request for \(String(describing: components?.url))")
+        
+        guard let components,
+              let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+            
+        var request = URLRequest(url: url)
+        request.httpMethod = endpoint.httpMethod
+        
+        return request
+    }
+    
 }
 
 extension Data {
     var prettyString: NSString {
         return NSString(data: self, encoding: String.Encoding.utf8.rawValue) ?? "Bad JSON"
+    }
+}
+
+struct TextSearchResults: Codable {
+    var textSearchResponseQuery: TextSearchResponseQuery?
+    
+    enum CodingKeys: String, CodingKey {
+        case textSearchResponseQuery = "query"
+    }
+}
+
+struct TextSearchResponseQuery: Codable {
+    var textSearchResponseInfo: TextSearchResponseInfo?
+    var textSearchResponseItems: [TextSearchResponseItem]?
+    
+    enum CodingKeys: String, CodingKey {
+        case textSearchResponseInfo = "searchinfo"
+        case textSearchResponseItems = "search"
+    }
+}
+
+struct TextSearchResponseInfo: Codable {
+    var totalHits: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case totalHits = "totalhits"
+    }
+}
+
+struct TextSearchResponseItem: Codable {
+    var title: String?
+    var pageId: Int?
+    var snippet: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case title
+        case pageId = "pageid"
+        case snippet
     }
 }

@@ -5,31 +5,57 @@
 //  Created by Robert Sparhawk on 8/25/25.
 //
 
-import Combine
 import MapKit
 import SwiftUI
 
 struct MapSearchView: View {
     @StateObject private var viewModel = MapSearchViewModel(locationManager: CLLocationManager())
-    @State private var selectedItem: GeoSearchArticleData?
+    @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var centerCoordinate: CLLocationCoordinate2D?
+    
     var body: some View {
-        Map {
-            // If we have articles in memory
-            if let articles = viewModel.articles {
-                // Filter out any with incomplete coordinate data
-                let filteredArticles = articles.filter {
-                    $0.lat != nil && $0.lon != nil
+        ZStack {
+            Map(position: $mapPosition) {
+                // If we have articles in memory
+                if let articles = viewModel.articles {
+                    // Filter out any with incomplete coordinate data
+                    let filteredArticles = articles.filter {
+                        $0.lat != nil && $0.lon != nil
+                    }
+                    // For each, generate a simple map marker
+                    ForEach(filteredArticles) { article in
+                        Marker(article.title ?? "", coordinate: CLLocationCoordinate2D(latitude: article.lat ?? 0, longitude: article.lon ?? 0))
+                    }
                 }
-                // For each, generate a simple map marker
-                ForEach(filteredArticles) { article in
-                    Marker(article.title ?? "", coordinate: CLLocationCoordinate2D(latitude: article.lat ?? 0, longitude: article.lon ?? 0))
+            }
+            .onMapCameraChange { mapCameraUpdate in
+                centerCoordinate = mapCameraUpdate.camera.centerCoordinate
+            }
+            .task {
+                // Fire request on first appear - to remove
+                viewModel.requestLocation()
+            }
+            HStack {
+                Spacer()
+                VStack {
+                    Button {
+                        if let lat = centerCoordinate?.latitude,
+                           let lon = centerCoordinate?.longitude {
+                            viewModel.searchAtCoordinates(lat: lat, lon: lon)
+                        }
+                    } label: {
+                        Text("Search Here")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .padding(.top, 10)
+                    .padding(.trailing, 20)
+                    Spacer()
                 }
             }
         }
-        .task {
-            // Fire request on first appear - to remove
-            viewModel.requestLocation()
-        }
+        
     }
 }
 

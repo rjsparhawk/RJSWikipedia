@@ -11,6 +11,7 @@ struct TextSearchView: View {
     @State var articles: [TextSearchArticleData]?
     @State private var queryText: String = ""
     @State private var showingError: Bool = false
+    
     private var networkManager = NetworkManager()
     
     var body: some View {
@@ -23,8 +24,10 @@ struct TextSearchView: View {
             
             VStack(spacing: 0) {
                 TextField(
-                    "Search Wikipedia...",
-                    text: $queryText
+                    "",
+                    text: $queryText,
+                    prompt: Text("Search Wikipedia...")
+                        .foregroundStyle(.gray)
                 )
                 .padding(.all, 10)
                 .onSubmit {
@@ -33,7 +36,7 @@ struct TextSearchView: View {
                     }
                 }
                 .background(Color.textfield)
-                
+                .foregroundStyle(.black)
                 
                 List(articles ?? []) { article in
                     ArticleRowView(viewModel: ArticleRowViewModel(articleData: article))
@@ -46,6 +49,7 @@ struct TextSearchView: View {
                     Text("We are unable to search right now. Please try again later.")
                 })
                 .listStyle(PlainListStyle())
+
             }
         }
         .background(Color.background)

@@ -5,10 +5,7 @@
 //  Created by Robert Sparhawk on 8/26/25.
 //
 
-import Combine
-import Foundation
 import MapKit
-import Observation
 import SwiftUI
 
 final class MapSearchViewModel: NSObject, ObservableObject {
@@ -27,21 +24,29 @@ final class MapSearchViewModel: NSObject, ObservableObject {
         expectingLocation = true
         locationManager.requestWhenInUseAuthorization()
     }
+    
+    func searchAtCoordinates(lat: Double, lon: Double) {
+        Task {
+            do {
+                try await NetworkManager().searchByLocation(coordinates: "\(lat)|\(lon)") { [weak self] result in
+                    self?.articles = try? result.get().geoSearchResponseQuery?.articles ?? []
+                }
+            } catch {
+                print("Failed to fetch data: \(error)")
+            }
+        }
+    }
 }
 
 extension MapSearchViewModel: CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let location = locations.first {
             let lat = location.coordinate.latitude
-            let long = location.coordinate.longitude
+            let lon = location.coordinate.longitude
             
             if expectingLocation == true {
                 expectingLocation = false
-                Task {
-                    try await NetworkManager().searchByLocation(coordinates: "\(lat)|\(long)") { [weak self] result in
-                        self?.articles = try? result.get().geoSearchResponseQuery?.articles ?? []
-                    }
-                }
+                searchAtCoordinates(lat: lat, lon: lon)
             }
         }
     }

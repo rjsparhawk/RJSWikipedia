@@ -10,6 +10,7 @@ import Foundation
 enum Host: String {
     case wikipedia = "https://en.wikipedia.org/"
     case wikimedia = "https://api.wikimedia.org/"
+    case pcGamingWiki = "https://www.pcgamingwiki.com/"
 }
 
 enum Endpoint {

@@ -8,26 +8,56 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State var text: String = "Hello, World!"
+    @State var articles: [ArticleData]?
+    @State private var queryText: String = ""
+    @State private var showingError: Bool = false
+    private var networkManager = NetworkManager()
     
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text(text)
+        ZStack {
+            VStack(alignment: .center) {
+                Spacer()
+                Text("⬆️ Search up here! ⬆️")
+                Spacer()
+            }
+            
+            VStack(spacing: 0) {
+                TextField(
+                    "Search Wikipedia...",
+                    text: $queryText
+                )
+                .padding(.all, 10)
+                .onSubmit {
+                    Task {
+                        await search(with: queryText)
+                    }
+                }
+                .background(Color.textfield)
+                
+                
+                List(articles ?? []) { article in
+                    ArticleRowView(viewModel: ArticleRowViewModel(articleData: article))
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                }
+                .scrollContentBackground(.hidden)
+                .alert("Error", isPresented: $showingError, actions: {
+                    // Leave empty to use the default "OK" action.
+                }, message: {
+                    Text("We are unable to search right now. Please try again later.")
+                })
+                .listStyle(PlainListStyle())
+            }
         }
-        .padding()
-        .task {
-            let networkManager = NetworkManager()
-            try! await networkManager.fetchLandingContent { result in
-                guard let title = try? result.get().tfa?.displayTitle else { return }
-                text = title
+        .background(Color.background)
+    }
+    
+    private func search(with text: String) async {
+        do {
+            try await networkManager.searchByText(text) { result in
+                articles = try! result.get().textSearchResponseQuery?.articles ?? []
             }
-            try! await networkManager.searchByText("Earth") { result in
-                guard let searchResults = try? result.get() else { return }
-                text = searchResults.textSearchResponseQuery?.textSearchResponseItems?.first?.title ?? "No results"
-            }
+        } catch {
+            showingError = true
         }
     }
 }

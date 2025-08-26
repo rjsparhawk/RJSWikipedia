@@ -49,8 +49,8 @@ enum Endpoint {
                 "pilimit": "max",
                 "pithumbsize": "200",
                 "srsearch": searchText,
-                "exintro": "true",
-                "explaintext": "true"
+                "exintro": "1",
+                "explaintext": "1"
             ]
         }
     }
@@ -149,31 +149,38 @@ struct TextSearchResults: Codable {
 }
 
 struct TextSearchResponseQuery: Codable {
-    var textSearchResponseInfo: TextSearchResponseInfo?
-    var textSearchResponseItems: [TextSearchResponseItem]?
+    var articles: [ArticleData]?
     
     enum CodingKeys: String, CodingKey {
-        case textSearchResponseInfo = "searchinfo"
-        case textSearchResponseItems = "search"
+        case articles = "pages"
     }
 }
 
-struct TextSearchResponseInfo: Codable {
-    var totalHits: Int?
+struct ArticleData: Codable, Identifiable {
+    let id: String = UUID().uuidString
     
-    enum CodingKeys: String, CodingKey {
-        case totalHits = "totalhits"
-    }
-}
-
-struct TextSearchResponseItem: Codable {
     var title: String?
     var pageId: Int?
-    var snippet: String?
+    var extract: String?
+    var thumbnail: Thumbnail?
+    
+    var wikipediaURL: URL? {
+        guard let pageId = pageId else { return nil }
+        return URL(string: "https://en.wikipedia.org/?curid=\(pageId)")
+    }
     
     enum CodingKeys: String, CodingKey {
         case title
         case pageId = "pageid"
-        case snippet
+        case extract
+        case thumbnail
+    }
+}
+
+struct Thumbnail: Codable {
+    var url: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case url = "source"
     }
 }

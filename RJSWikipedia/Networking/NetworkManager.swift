@@ -35,12 +35,22 @@ enum Endpoint {
             return nil
         case .textSearch(let searchText):
             return [
-              "action": "query",
-              "list": "search",
-              "srsearch": searchText,
-              "format": "json",
-              "prop": "extracts|pageimages",
-              "srlimit": "50",
+                "action": "query",
+                "format": "json",
+                "generator": "search",
+                "gsrsearch": searchText,
+                "gsrlimit": "50",
+                "prop": "extracts|pageimages",
+                "exlimit": "max",
+                "list": "search",
+                "redirects": "1",
+                "formatversion": "2",
+                "piprop": "thumbnail",
+                "pilimit": "max",
+                "pithumbsize": "200",
+                "srsearch": searchText,
+                "exintro": "true",
+                "explaintext": "true"
             ]
         }
     }

@@ -63,7 +63,7 @@ struct ArticleRowView: View {
 #Preview {
     ArticleRowView(
         viewModel: ArticleRowViewModel(
-            articleData: ArticleData(
+            articleData: TextSearchArticleData(
                 title: "Title",
                 pageId: 1,
                 extract: "Extract",

@@ -15,6 +15,7 @@ enum Host: String {
 enum Endpoint {
     case articleOfTheDay
     case textSearch(searchText: String)
+    case mapSearch(coordinates: String)
     
     var httpMethod: String {
         "GET"
@@ -24,10 +25,10 @@ enum Endpoint {
         switch self {
         case .articleOfTheDay:
             return "feed/v1/wikipedia/en/featured/"
-        case .textSearch(_):
+        case .textSearch(_), .mapSearch(_):
             return "w/api.php"
         }
-    }
+    } //https://en.wikipedia.org/w/api.php?action=query&format=json&list=geosearch&formatversion=2&gscoord=37.7891838%7C-122.4033522&gsradius=10000&gslimit=100
     
     var queryParameters: [String: String]? {
         switch self {
@@ -51,6 +52,16 @@ enum Endpoint {
                 "srsearch": searchText,
                 "exintro": "1",
                 "explaintext": "1"
+            ]
+        case .mapSearch(let coordinates):
+            return [
+                "action": "query",
+                "format": "json",
+                "list": "geosearch",
+                "formatversion": "2",
+                "gscoord": coordinates,
+                "gsradius": "10000",
+                "gslimit": "50"
             ]
         }
     }
@@ -102,6 +113,20 @@ final class NetworkManager {
         task.resume()
     }
     
+    func searchByLocation(coordinates: String, completion: @escaping (Result<GeoSearchResults, Error>) -> Void) async throws {
+        let request = try request(host: currentHost, endpoint: .mapSearch(coordinates: coordinates))
+        let task = session.dataTask(with: request) { data, _, error in
+                if let data,
+                    let geoSearchResults = try? JSONDecoder().decode(GeoSearchResults.self, from: data) {
+                    print("Search results: \(geoSearchResults)")
+                    completion(.success(geoSearchResults))
+                } else {
+                    completion(.failure(NetworkError.invalidJson))
+                }
+        }
+        task.resume()
+    }
+    
     // MARK: - Common
     private func request(host: Host, endpoint: Endpoint) throws -> URLRequest {
         var urlString = host.rawValue + endpoint.route
@@ -148,15 +173,47 @@ struct TextSearchResults: Codable {
     }
 }
 
+struct GeoSearchResults: Codable {
+    var geoSearchResponseQuery: GeoSearchResponseQuery?
+    
+    enum CodingKeys: String, CodingKey {
+        case geoSearchResponseQuery = "query"
+    }
+}
+
+struct GeoSearchResponseQuery: Codable {
+    var articles: [GeoSearchArticleData]?
+    
+    enum CodingKeys: String, CodingKey {
+        case articles = "geosearch"
+    }
+}
+
+struct GeoSearchArticleData: Codable, Identifiable, Hashable {
+    let id = UUID()
+    
+    var title: String?
+    var pageId: Int?
+    var lat: Double?
+    var lon: Double?
+    
+    enum CodingKeys: String, CodingKey {
+        case title
+        case pageId = "pageid"
+        case lat
+        case lon
+    }
+}
+
 struct TextSearchResponseQuery: Codable {
-    var articles: [ArticleData]?
+    var articles: [TextSearchArticleData]?
     
     enum CodingKeys: String, CodingKey {
         case articles = "pages"
     }
 }
 
-struct ArticleData: Codable, Identifiable {
+struct TextSearchArticleData: Codable, Identifiable {
     let id: String = UUID().uuidString
     
     var title: String?

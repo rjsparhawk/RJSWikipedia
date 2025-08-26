@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-struct ContentView: View {
-    @State var articles: [ArticleData]?
+struct TextSearchView: View {
+    @State var articles: [TextSearchArticleData]?
     @State private var queryText: String = ""
     @State private var showingError: Bool = false
     private var networkManager = NetworkManager()
@@ -63,5 +63,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    TextSearchView()
 }

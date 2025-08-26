@@ -6,9 +6,9 @@
 //
 
 struct ArticleRowViewModel {
-    var articleData: ArticleData
+    var articleData: TextSearchArticleData
     
-    init(articleData: ArticleData) {
+    init(articleData: TextSearchArticleData) {
         self.articleData = articleData
     }
 }

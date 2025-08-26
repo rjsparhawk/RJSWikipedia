@@ -47,7 +47,7 @@ struct MapSearchView: View {
                         Text("Search Here")
                     }
                     .buttonStyle(.borderedProminent)
-                    .background(Color.blue)
+                    .background(.button)
                     .foregroundColor(.white)
                     .padding(.top, 10)
                     .padding(.trailing, 20)

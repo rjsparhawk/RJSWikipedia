@@ -9,9 +9,13 @@ import MapKit
 import SwiftUI
 
 struct MapSearchView: View {
-    @StateObject private var viewModel = MapSearchViewModel(locationManager: CLLocationManager())
+    @StateObject var viewModel: MapSearchViewModel
     @State private var mapPosition: MapCameraPosition = .automatic
     @State private var centerCoordinate: CLLocationCoordinate2D?
+    
+    init(viewModel: MapSearchViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
     
     var body: some View {
         ZStack {
@@ -55,10 +59,14 @@ struct MapSearchView: View {
                 }
             }
         }
-        
+        .alert("Error", isPresented: $viewModel.showingError, actions: {
+            // Leave empty to use the default "OK" action.
+        }, message: {
+            Text("We are unable to search right now. Please try again later.")
+        })
     }
 }
 
 #Preview {
-    MapSearchView()
+    MapSearchView(viewModel: MapSearchViewModel(locationManager: CLLocationManager(), networkManager: NetworkManager()))
 }

@@ -10,12 +10,14 @@ import SwiftUI
 
 final class MapSearchViewModel: NSObject, ObservableObject {
     private let locationManager: CLLocationManager
-    private let networkManager = NetworkManager()
+    private let networkManager: NetworkManager
     private var expectingLocation: Bool = false
     @Published var articles: [GeoSearchArticleData]?
+    @Published var showingError = false
     
-    init(locationManager: CLLocationManager) {
+    init(locationManager: CLLocationManager, networkManager: NetworkManager) {
         self.locationManager = locationManager
+        self.networkManager = networkManager
         super.init()
         self.locationManager.delegate = self
     }
@@ -29,10 +31,15 @@ final class MapSearchViewModel: NSObject, ObservableObject {
         Task {
             do {
                 try await NetworkManager().searchByLocation(coordinates: "\(lat)|\(lon)") { [weak self] result in
-                    self?.articles = try? result.get().geoSearchResponseQuery?.articles ?? []
+                    // Concurrency warning here - TODO
+                    do {
+                        self?.articles = try result.get().geoSearchResponseQuery?.articles ?? []
+                    } catch {
+                        self?.showingError = true
+                    }
                 }
             } catch {
-                print("Failed to fetch data: \(error)")
+                showingError = true
             }
         }
     }
